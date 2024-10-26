@@ -1,0 +1,34 @@
+name: Install SF CLI
+description: Install and setup Salesforce CLI
+inputs:
+  version:
+    description: Version of the CLI
+    required: false
+    default: 'latest'
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      name: Check version of package in NPM registry
+      id: get-npm-version
+      run: echo "version=$(npm show @salesforce/cli@${{ inputs.version }} version)" >> $GITHUB_OUTPUT
+
+    - name: Cache CLI
+      uses: actions/cache@v4
+      id: cache
+      with:
+        path: ~/sf
+        key: sf-cli-${{ steps.get-npm-version.outputs.version }}
+
+    - name: Install CLI
+      shell: bash
+      id: install-cli
+      env:
+        CLI_VERSION: ${{ steps.get-npm-version.outputs.version }}
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        npm install --prefix ~/sf @salesforce/cli@$CLI_VERSION --global
+
+    - name: Add binary to PATH
+      shell: bash
+      run: echo "~/sf/bin" >> $GITHUB_PATH
